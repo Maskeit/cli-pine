@@ -3,18 +3,29 @@ vantiva-cli.py
 Command line interface
 Created by Miguel Alejandre / @Maskeit
 """
+import os
+import re
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
-import os
-import re
 from pinecone import Pinecone
+from dotenv import load_dotenv
 
-os.environ['PINECONE_API_KEY'] = "pcsk_2a3MQz_otCFT2VN4UbsCafCGJdh3Qh9wrpFCM2R7AGAq536bqRvx5EGwMUmuPhrASGeHa"
-INDEX_NAME = "taller"
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+load_dotenv()
+
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
 pinecone = Pinecone(api_key=os.environ['PINECONE_API_KEY'])
-index = pinecone.Index(INDEX_NAME)
+
+def cargar_indice(nombre):
+    try:
+        return pinecone.Index(nombre)
+    except Exception as e:
+        print(f"Error al cargar el índice '{nombre}': {e}")
+        return None
+
+
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 # Limpia texto de saltos o espacios raros
 def limpiar_texto(texto):
@@ -23,7 +34,7 @@ def limpiar_texto(texto):
     return texto.strip()
 
 # Metodo para generar embeddings
-def generar_embeddings(ruta_pdf):
+def generar_embeddings(index, ruta_pdf):
     print(f"Generando embeddings de {ruta_pdf}...")
     loader = PyPDFLoader(ruta_pdf)
     docs = loader.load()
@@ -56,16 +67,16 @@ def listar_indices():
         print(f" - {i}")
         
 # muestra la infor de un solo indice pedido
-def mostrar_info_indice():
+def mostrar_info_indice(index):
     try:
-        info = pinecone.describe_index(index=INDEX_NAME)
+        info = pinecone.describe_index(index=index._index_name)
         print(f"Información del índice :")
         for k, v in info.items():
             print(f"{k}: {v}")
     except Exception as e:
         print(f"Error al obtener información del índice : {e}")
 
-def buscar_pregunta(pregunta):
+def buscar_pregunta(index, pregunta):
     query_vec = embeddings.embed_query(pregunta)
     res = index.query(vector=query_vec, top_k=3, include_metadata=True)
     for match in res['matches']:
@@ -74,18 +85,18 @@ def buscar_pregunta(pregunta):
 
 
 # elimina un vector por id
-def eliminar_vector_por_id(vector_id):
+def eliminar_vector_por_id(index, vector_id):
     index.delete(ids=[vector_id])
     print(f"Vector con ID '{vector_id}' eliminado.")
 
 # elimina un vector por metadata
-def eliminar_vector_por_metadata(campo, valor):
+def eliminar_vector_por_metadata(index, campo, valor):
     filtro = {campo: {"$eq": valor}}
     index.delete(filter=filtro)
     print(f"Vectores con {campo} = '{valor}' eliminados.")
 
 # elimina todos los vectores, limpia la BDV
-def eliminar_todos_los_vectores():
+def eliminar_todos_los_vectores(index):
     index.delete(delete_all=True)
     print("Todos los vectores han sido eliminados del índice.")
 

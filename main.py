@@ -13,10 +13,18 @@ from utils.vantiva import (
     eliminar_vector_por_id,
     eliminar_vector_por_metadata,
     eliminar_todos_los_vectores,
-    generar_embeddings_a_txt
+    generar_embeddings_a_txt,
+    cargar_indice
 )
 
 def menu():
+    global index
+    print("=== CONFIGURACIÓN INICIAL ===")
+    index_name = input("Nombre del índice Pinecone a usar o crear: ")
+    index = cargar_indice(index_name)
+    if index is None:
+        return
+
     while True:
         print("\n=== MENÚ VANTIVA EMBEDDINGS ===")
         print("1. Generar embeddings de un PDF")
@@ -32,15 +40,14 @@ def menu():
 
         if opcion == '1':
             ruta = input("Ruta al archivo PDF: ")
-            generar_embeddings(ruta)
+            generar_embeddings(index, ruta)
         elif opcion == '2':
-            index_name = input("Nombre del índice a eliminar: ")
             eliminar_indice(index_name)
         elif opcion == '3':
             listar_indices()
         elif opcion == '4':
             pregunta = input("Escribe tu pregunta: ")
-            buscar_pregunta(pregunta)
+            buscar_pregunta(index, pregunta)
         elif opcion == '5':
             print("Saliendo...")
             break
@@ -48,19 +55,19 @@ def menu():
             clave = input("¿Eliminar por ID o metadato? (id/metadata): ")
             if clave == 'id':
                 vector_id = input("ID del vector a eliminar: ")
-                eliminar_vector_por_id(vector_id)
+                eliminar_vector_por_id(index, vector_id)
             elif clave == 'metadata':
                 campo = input("Nombre del campo de metadata (e.g. 'text'): ")
                 valor = input("Valor del campo a eliminar: ")
-                eliminar_vector_por_metadata(campo, valor)
+                eliminar_vector_por_metadata(index, campo, valor)
             else:
                 print("Opción inválida.")
         elif opcion == '7':
             confirmar = input("¿Seguro que quieres borrar TODOS los vectores? (si/no): ")
             if confirmar.lower() == "si":
-                eliminar_todos_los_vectores()
+                eliminar_todos_los_vectores(index)
         elif opcion == '8':        
-            mostrar_info_indice()
+            mostrar_info_indice(index)
         elif opcion == '9':
             ruta = input("Ruta al archivo PDF: ")
             generar_embeddings_a_txt(ruta, "salida.txt")
