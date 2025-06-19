@@ -4,7 +4,7 @@ Command line interface
 Created by Miguel Alejandre / @Maskeit
 """
 import os
-from utils.vantiva import (
+from utils.utils import (
     generar_embeddings,
     eliminar_indice,
     listar_indices,
